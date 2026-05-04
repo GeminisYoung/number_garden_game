@@ -72,3 +72,7 @@ digital-garden/
 ## 📄 许可证
 
 MIT License - 完全免费！
+
+## 🎉 创作说明
+
+本项目由 trae 创作！
