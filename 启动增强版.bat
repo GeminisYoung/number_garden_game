@@ -1,0 +1,3 @@
+@echo off
+echo 🌱 启动数字花园增强版...
+start index-enhanced.html

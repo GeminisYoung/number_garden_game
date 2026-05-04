@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 数字花园 - 最终版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(to bottom, #e0f2fe, #dcfce7); min-height: 100vh; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        h1 { text-align: center; color: #15803d; font-size: 2rem; margin-bottom: 16px; }
+        
+        /* 植物解锁计数器 */
+        .unlock-counter {
+            background: linear-gradient(to right, #22c55e, #16a34a);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .unlock-text { font-weight: bold; font-size: 1rem; }
+        .unlock-btn-group { display: flex; gap: 8px; }
+        .unlock-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .unlock-btn:hover { background: rgba(255,255,255,0.35); }
+        .help-btn { background: linear-gradient(to right, #3b82f6, #8b5cf6); }
+        
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+        .stat { text-align: center; padding: 10px; border-radius: 12px; }
+        .stat.correct { background: #dcfce7; color: #15803d; }
+        .stat.wrong { background: #fee2e2; color: #b91c1c; }
+        .stat.plants { background: #f3e8ff; color: #7c3aed; }
+        .stat.mistakes { background: #fef3c7; color: #92400e; }
+        .stat-value { font-size: 1.25rem; font-weight: bold; }
+        .stat-label { font-size: 0.7rem; margin-top: 4px; }
+        .next-unlock { background: #fef3c7; color: #92400e; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
+        .garden { background: linear-gradient(to bottom, #7dd3fc, #86efac); border-radius: 16px; padding: 20px; }
+        .garden h2 { text-align: center; color: #15803d; margin-bottom: 16px; }
+        .garden-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .garden-slot { aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; cursor: pointer; transition: transform 0.15s; background: #fef3c7; }
+        .garden-slot:hover { transform: scale(1.05); }
+        .garden-slot.has-plant { background: #fde68a; }
+        .actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .btn { padding: 16px; border-radius: 16px; border: none; font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.15s; color: white; }
+        .btn:hover { transform: scale(1.02); }
+        .btn-quiz { background: linear-gradient(to right, #3b82f6, #8b5cf6); }
+        .btn-mistakes { background: linear-gradient(to right, #f59e0b, #d97706); }
+        .btn-refresh { background: linear-gradient(to right, #9ca3af, #6b7280); }
+        .btn-small { padding: 10px 14px; font-size: 0.875rem; border-radius: 10px; }
+        .btn-primary { background: #3b82f6; }
+        .btn-success { background: #22c55e; }
+        .btn-danger { background: #ef4444; }
+        
+        /* 游戏说明弹窗特殊样式 */
+        .help-header { background: linear-gradient(to right, #10b981, #059669) !important; }
+        .help-body { max-height: 70vh; overflow-y: auto; }
+        .help-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #e5e7eb; }
+        .help-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .help-title { font-weight: bold; font-size: 1.1rem; color: #1f2937; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .help-content { color: #4b5563; font-size: 0.9rem; line-height: 1.6; }
+        .help-list { list-style: none; padding-left: 0; }
+        .help-list li { padding: 6px 0; display: flex; gap: 10px; }
+        .help-list li:before { content: '✨'; font-size: 0.8rem; margin-top: 3px; }
+        .faq-item { background: #f9fafb; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+        .faq-q { font-weight: bold; color: #374151; margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start; }
+        .faq-a { color: #4b5563; font-size: 0.9rem; padding-left: 24px; }
+        .quick-start { background: linear-gradient(to right, #dbeafe, #f3e8ff); padding: 15px; border-radius: 12px; border: 2px solid #818cf8; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow: hidden; }
+        .modal-header { background: linear-gradient(to right, #22c55e, #10b981); padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header.quiz { background: linear-gradient(to right, #3b82f6, #8b5cf6); }
+        .modal-header.mistakes { background: linear-gradient(to right, #f59e0b, #d97706); }
+        .modal-header.album { background: linear-gradient(to right, #8b5cf6, #7c3aed); }
+        .modal-title { color: white; font-size: 1.5rem; font-weight: bold; }
+        .modal-close { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+
+        /* 植物图鉴 */
+        .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .album-item { padding: 16px; border-radius: 12px; text-align: center; position: relative; transition: transform 0.15s; }
+        .album-item:hover { transform: scale(1.03); }
+        .album-item.unlocked { background: #dcfce7; border: 2px solid #86efac; }
+        .album-item.locked { background: #f3f4f6; border: 2px solid #e5e7eb; }
+        .album-emoji { font-size: 3.5rem; margin-bottom: 8px; }
+        .album-item.locked .album-emoji { filter: grayscale(100%) opacity(0.5); }
+        .album-name { font-weight: bold; font-size: 1rem; margin-bottom: 4px; }
+        .album-item.locked .album-name { color: #9ca3af; }
+        .album-desc { font-size: 0.8rem; color: #4b5563; margin-bottom: 6px; }
+        .album-condition { font-size: 0.75rem; color: #f59e0b; font-weight: bold; background: #fef3c7; padding: 4px 10px; border-radius: 12px; display: inline-block; }
+        .album-item.unlocked .album-condition { display: none; }
+        .lock-icon { position: absolute; top: 8px; right: 8px; font-size: 1.25rem; }
+        .album-item.unlocked .lock-icon { display: none; }
+        .album-stats { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 0.875rem; }
+
+        /* Quiz */
+        .difficulty-buttons { display: flex; gap: 8px; margin-bottom: 16px; }
+        .diff-btn { padding: 8px 14px; border-radius: 20px; border: none; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+        .diff-btn.active.easy { background: #dcfce7; color: #15803d; }
+        .diff-btn.active.medium { background: #fef3c7; color: #92400e; }
+        .diff-btn.active.hard { background: #fee2e2; color: #b91c1c; }
+        .diff-btn:not(.active) { background: #f3f4f6; color: #4b5563; }
+        .question-display { background: linear-gradient(to right, #eff6ff, #faf5ff); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+        .question-text { font-size: 2.25rem; font-weight: bold; color: #1f2937; }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .option-btn { padding: 16px; border-radius: 12px; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; transition: transform 0.15s; }
+        .option-btn:not(.answered) { background: #3b82f6; color: white; }
+        .option-btn:not(.answered):hover { transform: scale(1.05); background: #2563eb; }
+        .option-btn.correct { background: #22c55e; color: white; }
+        .option-btn.wrong { background: #ef4444; color: white; }
+        .option-btn.disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+        .feedback { padding: 12px; border-radius: 12px; text-align: center; margin-top: 16px; }
+        .feedback.correct { background: #dcfce7; color: #15803d; }
+        .feedback.wrong { background: #fee2e2; color: #b91c1c; }
+        .continue-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; background: #8b5cf6; color: white; font-weight: bold; font-size: 1rem; margin-top: 16px; cursor: pointer; }
+
+        /* Mistakes System */
+        .mistake-item { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 10px; background: #f9fafb; }
+        .mistake-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .mistake-question { font-weight: bold; font-size: 1.1rem; color: #1f2937; }
+        .mistake-difficulty { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; }
+        .mistake-difficulty.easy { background: #dcfce7; color: #15803d; }
+        .mistake-difficulty.medium { background: #fef3c7; color: #92400e; }
+        .mistake-difficulty.hard { background: #fee2e2; color: #b91c1c; }
+        .mistake-info { font-size: 0.875rem; color: #4b5563; margin-bottom: 8px; }
+        .mistake-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .mistakes-empty { text-align: center; color: #9ca3af; padding: 40px; }
+        .filter-section { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-btn { padding: 6px 12px; border-radius: 16px; border: 1px solid #e5e7eb; background: white; font-size: 0.8rem; cursor: pointer; }
+        .filter-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .progress-fill { height: 100%; background: linear-gradient(to right, #22c55e, #16a34a); transition: width 0.3s; }
+
+        /* Shop */
+        .plant-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .plant-card { padding: 16px; background: #dcfce7; border-radius: 12px; cursor: pointer; transition: transform 0.15s; text-align: left; border: none; }
+        .plant-card:hover { transform: scale(1.02); background: #bbf7d0; }
+        .plant-emoji { font-size: 2.5rem; margin-bottom: 8px; }
+        .plant-name { font-weight: bold; color: #1f2937; }
+        .plant-desc { font-size: 0.75rem; color: #4b5563; margin-top: 4px; }
+        .plant-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .action-btn { padding: 12px; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; color: white; }
+        .action-btn.grow { background: #22c55e; }
+        .action-btn.remove { background: #ef4444; }
+        .plant-detail { text-align: center; }
+        .plant-detail-emoji { font-size: 4rem; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🌱 数字花园 - 最终版</h1>
+            
+            <!-- 植物解锁计数器 + 帮助按钮 -->
+            <div class="unlock-counter">
+                <span class="unlock-text">🌿 已解锁 <span id="unlockedCount">1</span>/<span id="totalPlants">6</span> 种植物</span>
+                <div class="unlock-btn-group">
+                    <button class="unlock-btn" onclick="openAlbum()">📖 图鉴</button>
+                    <button class="unlock-btn help-btn" onclick="openHelp()">❓ 帮助</button>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat correct">
+                    <div class="stat-value">✅ <span id="correctCount">0</span></div>
+                    <div class="stat-label">答对</div>
+                </div>
+                <div class="stat wrong">
+                    <div class="stat-value">❌ <span id="wrongCount">0</span></div>
+                    <div class="stat-label">答错</div>
+                </div>
+                <div class="stat plants">
+                    <div class="stat-value">🌿 <span id="plantsCount">1</span></div>
+                    <div class="stat-label">解锁</div>
+                </div>
+                <div class="stat mistakes">
+                    <div class="stat-value">📚 <span id="mistakesCount">0</span></div>
+                    <div class="stat-label">错题</div>
+                </div>
+            </div>
+            <div class="next-unlock" id="nextUnlock">
+                再答对 <span id="neededForNext">3</span> 题解锁：🌷 郁金香
+            </div>
+        </div>
+
+        <div class="garden">
+            <h2>🌱 我的花园</h2>
+            <div class="garden-grid" id="gardenGrid"></div>
+        </div>
+
+        <div class="card">
+            <div class="actions">
+                <button class="btn btn-quiz" onclick="openQuiz()">🧮 做数学题</button>
+                <button class="btn btn-mistakes" onclick="openMistakes()">📚 错题库</button>
+                <button class="btn btn-refresh" onclick="location.reload()">🔄 刷新花园</button>
+            </div>
+        </div>
+
+        <div class="card instructions">
+            <h3 style="font-weight: bold; margin-bottom: 8px; color: #1f2937;">📖 快速开始</h3>
+            <p style="font-size: 0.875rem; color: #4b5563;">点击"❓ 帮助"按钮查看详细说明！</p>
+        </div>
+    </div>
+
+    <!-- 游戏说明弹窗 -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header help-header">
+                <span class="modal-title">❓ 游戏说明</span>
+                <button class="modal-close" onclick="closeHelp()">×</button>
+            </div>
+            <div class="modal-body help-body">
+                <!-- 快速上手指南 -->
+                <div class="help-section quick-start">
+                    <div class="help-title">⚡ 3步快速上手指南</div>
+                    <div class="help-content">
+                        <ol style="padding-left: 20px;">
+                            <li style="margin-bottom: 8px;"><strong>种植</strong>：点击花园空位，选择向日葵种上</li>
+                            <li style="margin-bottom: 8px;"><strong>答题</strong>：点击"做数学题"，答对解锁更多植物</li>
+                            <li><strong>收集</strong>：解锁全部6种植物，填满花园！</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <!-- 核心玩法介绍 -->
+                <div class="help-section">
+                    <div class="help-title">🎮 核心玩法介绍</div>
+                    <div class="help-content">
+                        <p style="margin-bottom: 8px;">《数字花园》是一款结合数学学习和种植养成的小游戏！</p>
+                        <ul class="help-list">
+                            <li><strong>答题解锁植物</strong>：每答对一定数量的题，会解锁新植物</li>
+                            <li><strong>种植装饰花园</strong>：把喜欢的植物种在花园里</li>
+                            <li><strong>植物生长系统</strong>：植物有多个生长阶段，通过答题施肥长大</li>
+                            <li><strong>错题自动记录</strong>：错题会自动记录，方便复习</li>
+                            <li><strong>收集图鉴系统</strong>：查看已解锁和未解锁的植物</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 操作指南 -->
+                <div class="help-section">
+                    <div class="help-title">📱 详细操作指南</div>
+                    <div class="help-content">
+                        <h4 style="font-weight: bold; margin: 10px 0 6px 0; color: #374151;">🌱 花园操作</h4>
+                        <ul class="help-list">
+                            <li>点击<strong>空的格子</strong> → 选择植物种植</li>
+                            <li>点击<strong>已种植物</strong> → 管理/施肥/移除</li>
+                            <li>植物生长阶段：🟫 → 🌱 → 🌿 → 最终形态</li>
+                        </ul>
+                        
+                        <h4 style="font-weight: bold; margin: 14px 0 6px 0; color: #374151;">🧮 答题操作</h4>
+                        <ul class="help-list">
+                            <li>点击<strong>难度按钮</strong> → 切换题目难度</li>
+                            <li>点击<strong>选项按钮</strong> → 选择你的答案</li>
+                            <li>点击<strong>下一题</strong> → 继续答题</li>
+                            <li>点击右上角<strong>×</strong> → 关闭答题窗口</li>
+                        </ul>
+                        
+                        <h4 style="font-weight: bold; margin: 14px 0 6px 0; color: #374151;">📚 错题本操作</h4>
+                        <ul class="help-list">
+                            <li>点击<strong>筛选按钮</strong> → 按难度查看错题</li>
+                            <li>点击<strong>练习错题</strong> → 重做错题</li>
+                            <li>点击<strong>导出错题</strong> → 导出为txt文件保存</li>
+                            <li>点击<strong>移除</strong> → 从错题本删除某题</li>
+                        </ul>
+                        
+                        <h4 style="font-weight: bold; margin: 14px 0 6px 0; color: #374151;">📖 图鉴操作</h4>
+                        <ul class="help-list">
+                            <li>查看<strong>彩色卡片</strong> → 已解锁的植物</li>
+                            <li>查看<strong>灰色卡片</strong> → 未解锁的植物</li>
+                            <li>查看<strong>底部进度</strong> → 收集百分比</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 功能模块说明 -->
+                <div class="help-section">
+                    <div class="help-title">🔧 功能模块介绍</div>
+                    <div class="help-content">
+                        <div style="background: #f0fdf4; padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                            <strong style="color: #15803d;">📊 统计卡片</strong>
+                            <p style="font-size: 0.85rem; color: #374151; margin-top: 4px;">显示答对、答错、解锁植物、错题数量</p>
+                        </div>
+                        <div style="background: #eff6ff; padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                            <strong style="color: #1d4ed8;">🌿 解锁进度</strong>
+                            <p style="font-size: 0.85rem; color: #374151; margin-top: 4px;">绿色条显示已解锁植物数量，右侧按钮打开图鉴和帮助</p>
+                        </div>
+                        <div style="background: #fefce8; padding: 12px; border-radius: 10px;">
+                            <strong style="color: #854d0e;">🔄 刷新花园</strong>
+                            <p style="font-size: 0.85rem; color: #374151; margin-top: 4px;">刷新页面重新加载，进度不会丢失！</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 常见问题解答 -->
+                <div class="help-section">
+                    <div class="help-title">❓ 常见问题解答 (FAQ)</div>
+                    <div class="help-content">
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 关闭游戏后，进度还在吗？</div>
+                            <div class="faq-a">A: 在的！游戏自动保存到浏览器中，刷新或关闭再打开，进度都不会丢失！</div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 可以在手机上玩吗？</div>
+                            <div class="faq-a">A: 可以的！这个游戏支持响应式布局，手机浏览器也能完美运行！</div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 题目太难了怎么办？</div>
+                            <div class="faq-a">A: 在答题窗口上方有难度选择按钮，点击"简单"就好啦！</div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 想重新开始玩怎么办？</div>
+                            <div class="faq-a">A: 目前需要清除浏览器数据（有点复杂）。后续我们会添加重置按钮！</div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 植物会枯死吗？</div>
+                            <div class="faq-a">A: 不会的！种下去就会一直健康地生长，不用担心忘记浇水！</div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-q"><span>Q:</span> 为什么有些植物是灰色的？</div>
+                            <div class="faq-a">A: 灰色表示还未解锁，需要答对一定数量的数学题才能解锁！</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 游戏技巧分享 -->
+                <div class="help-section">
+                    <div class="help-title">💡 游戏小技巧</div>
+                    <div class="help-content">
+                        <ul class="help-list">
+                            <li>先从简单难度开始，正确率更高，解锁更快！</li>
+                            <li>及时查看错题本，避免同样的错误再犯！</li>
+                            <li>植物种满花园看起来会很有成就感！</li>
+                            <li>可以和朋友比赛，看谁先解锁所有植物！</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Modal -->
+    <div class="modal" id="quizModal">
+        <div class="modal-content">
+            <div class="modal-header quiz">
+                <span class="modal-title">🧮 数学挑战</span>
+                <button class="modal-close" onclick="closeQuiz()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="difficulty-buttons">
+                    <button class="diff-btn active easy" onclick="setDifficulty('easy', this)">简单</button>
+                    <button class="diff-btn medium" onclick="setDifficulty('medium', this)">中等</button>
+                    <button class="diff-btn hard" onclick="setDifficulty('hard', this)">困难</button>
+                </div>
+                <div class="question-display">
+                    <div class="question-text" id="questionText">5 + 3 = ?</div>
+                </div>
+                <div class="options-grid" id="optionsGrid"></div>
+                <div id="feedbackArea"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Album Modal -->
+    <div class="modal" id="albumModal">
+        <div class="modal-content">
+            <div class="modal-header album">
+                <span class="modal-title">📖 植物图鉴</span>
+                <button class="modal-close" onclick="closeAlbum()">×</button>
+            </div>
+            <div class="modal-body" id="albumBody"></div>
+        </div>
+    </div>
+
+    <!-- Mistakes Modal -->
+    <div class="modal" id="mistakesModal">
+        <div class="modal-content">
+            <div class="modal-header mistakes">
+                <span class="modal-title">📚 错题库</span>
+                <button class="modal-close" onclick="closeMistakes()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="filter-section">
+                    <button class="filter-btn active" onclick="filterMistakes('all', this)">全部</button>
+                    <button class="filter-btn" onclick="filterMistakes('easy', this)">简单</button>
+                    <button class="filter-btn" onclick="filterMistakes('medium', this)">中等</button>
+                    <button class="filter-btn" onclick="filterMistakes('hard', this)">困难</button>
+                </div>
+                <div id="mistakesList"></div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-primary btn-small" style="flex: 1;" onclick="practiceMistakes()">📝 练习错题</button>
+                    <button class="btn btn-success btn-small" style="flex: 1;" onclick="exportMistakes()">📤 导出错题</button>
+                    <button class="btn btn-danger btn-small" onclick="clearMistakes()">🗑️ 清空错题</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div class="modal" id="shopModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="shopTitle">🏪 植物商店</span>
+                <button class="modal-close" onclick="closeShop()">×</button>
+            </div>
+            <div class="modal-body" id="shopBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 数据定义 ====================
+        
+        const PLANTS = [
+            { id: 'sunflower', name: '向日葵', emoji: '🌻', stages: 3, unlockAt: 0, desc: '你的第一朵花！永远朝着阳光生长。' },
+            { id: 'tulip', name: '郁金香', emoji: '🌷', stages: 3, unlockAt: 3, desc: '优雅的春天使者，带来美丽与希望。' },
+            { id: 'rose', name: '玫瑰', emoji: '🌹', stages: 4, unlockAt: 8, desc: '美丽的红玫瑰，象征着爱与热情。' },
+            { id: 'cherry', name: '樱花', emoji: '🌸', stages: 4, unlockAt: 15, desc: '浪漫的樱花，随风飘落的美丽。' },
+            { id: 'cactus', name: '仙人掌', emoji: '🌵', stages: 3, unlockAt: 25, desc: '坚强的沙漠植物，生命力顽强！' },
+            { id: 'tree', name: '大树', emoji: '🌳', stages: 5, unlockAt: 40, desc: '参天大树，花园的守护者！' }
+        ];
+
+        const GROWTH_STAGES = ['🌱', '🌿', null, null, null];
+
+        // ==================== 游戏状态 ====================
+        
+        let gameState = {
+            correct: 0,
+            wrong: 0,
+            garden: [],
+            unlockedPlants: ['sunflower'],
+            mistakes: []
+        };
+
+        let currentQuestion = null;
+        let currentDifficulty = 'easy';
+        let answered = false;
+        let selectedSlotId = null;
+        let slotForGrow = null;
+        let currentFilter = 'all';
+        let isPracticeMode = false;
+        let practiceQueue = [];
+
+        // ==================== 初始化 ====================
+
+        function initGarden() {
+            for (let i = 0; i < 12; i++) {
+                gameState.garden.push({ id: i, plantId: null, stage: 0 });
+            }
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('digitalGardenState_final');
+            if (saved) {
+                gameState = JSON.parse(saved);
+            } else {
+                initGarden();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('digitalGardenState_final', JSON.stringify(gameState));
+        }
+
+        // ==================== 增强版题目生成系统 ====================
+
+        function generateQuestion() {
+            let q;
+            if (isPracticeMode && practiceQueue.length > 0) {
+                q = practiceQueue.shift();
+                if (practiceQueue.length === 0) {
+                    isPracticeMode = false;
+                }
+                const wrong = generateWrongOptions(q.answer, q.difficulty);
+                q.options = shuffleArray([q.answer, ...wrong]);
+                currentQuestion = q;
+            } else {
+                switch (currentDifficulty) {
+                    case 'easy':
+                        currentQuestion = generateEasyQuestion();
+                        break;
+                    case 'medium':
+                        currentQuestion = generateMediumQuestion();
+                        break;
+                    case 'hard':
+                        currentQuestion = generateHardQuestion();
+                        break;
+                }
+            }
+            answered = false;
+            renderQuestion();
+        }
+
+        function generateEasyQuestion() {
+            const type = Math.random();
+            let a, b, question, answer;
+            
+            if (type < 0.6) {
+                a = Math.floor(Math.random() * 10) + 1;
+                b = Math.floor(Math.random() * 10) + 1;
+                question = `${a} + ${b} = ?`;
+                answer = a + b;
+            } else {
+                a = Math.floor(Math.random() * 10) + 5;
+                b = Math.floor(Math.random() * a) + 1;
+                question = `${a} - ${b} = ?`;
+                answer = a - b;
+            }
+            
+            const wrong = generateWrongOptions(answer, 'easy');
+            return { id: Date.now(), question, answer, options: shuffleArray([answer, ...wrong]), difficulty: 'easy', tags: [] };
+        }
+
+        function generateMediumQuestion() {
+            const type = Math.random();
+            let a, b, c, question, answer;
+            
+            if (type < 0.4) {
+                a = Math.floor(Math.random() * 30) + 10;
+                b = Math.floor(Math.random() * 20) + 5;
+                c = Math.floor(Math.random() * 10) + 5;
+                question = `${a} + ${b} - ${c} = ?`;
+                answer = a + b - c;
+            } else if (type < 0.7) {
+                a = Math.floor(Math.random() * 12) + 2;
+                b = Math.floor(Math.random() * 12) + 2;
+                question = `${a} × ${b} = ?`;
+                answer = a * b;
+            } else {
+                a = Math.floor(Math.random() * 100) + 50;
+                b = Math.floor(Math.random() * 50) + 10;
+                question = `${a} - ${b} = ?`;
+                answer = a - b;
+            }
+            
+            const wrong = generateWrongOptions(answer, 'medium');
+            return { id: Date.now(), question, answer, options: shuffleArray([answer, ...wrong]), difficulty: 'medium', tags: [] };
+        }
+
+        function generateHardQuestion() {
+            const type = Math.random();
+            let a, b, c, d, question, answer;
+            
+            if (type < 0.25) {
+                a = Math.floor(Math.random() * 50) + 20;
+                b = Math.floor(Math.random() * 30) + 10;
+                c = Math.floor(Math.random() * 20) + 5;
+                d = Math.floor(Math.random() * 10) + 1;
+                question = `${a} + ${b} - ${c} + ${d} = ?`;
+                answer = a + b - c + d;
+            } else if (type < 0.5) {
+                a = Math.floor(Math.random() * 30) + 10;
+                b = Math.floor(Math.random() * 20) + 5;
+                c = Math.floor(Math.random() * 10) + 2;
+                question = `(${a} - ${b}) × ${c} = ?`;
+                answer = (a - b) * c;
+            } else if (type < 0.75) {
+                a = Math.floor(Math.random() * 15) + 5;
+                b = Math.floor(Math.random() * 12) + 3;
+                c = Math.floor(Math.random() * 20) + 10;
+                question = `${a} × ${b} + ${c} = ?`;
+                answer = a * b + c;
+            } else {
+                b = Math.floor(Math.random() * 12) + 3;
+                answer = Math.floor(Math.random() * 15) + 5;
+                a = b * answer;
+                c = Math.floor(Math.random() * 10) + 1;
+                question = `${a} ÷ ${b} + ${c} = ?`;
+                answer = Math.floor(a / b) + c;
+            }
+            
+            const wrong = generateWrongOptions(answer, 'hard');
+            return { id: Date.now(), question, answer, options: shuffleArray([answer, ...wrong]), difficulty: 'hard', tags: [] };
+        }
+
+        function generateWrongOptions(answer, difficulty) {
+            const wrong = new Set();
+            const range = difficulty === 'easy' ? 5 : difficulty === 'medium' ? 10 : 15;
+            
+            while (wrong.size < 3) {
+                let offset = Math.floor(Math.random() * range * 2) - range;
+                if (offset === 0) offset = Math.random() > 0.5 ? 1 : -1;
+                const candidate = answer + offset;
+                if (candidate >= 0 && candidate !== answer) {
+                    wrong.add(candidate);
+                }
+            }
+            return Array.from(wrong);
+        }
+
+        function shuffleArray(arr) {
+            const newArr = [...arr];
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        }
+
+        // ==================== UI 渲染 ====================
+
+        function updateUI() {
+            document.getElementById('correctCount').textContent = gameState.correct;
+            document.getElementById('wrongCount').textContent = gameState.wrong;
+            document.getElementById('mistakesCount').textContent = gameState.mistakes.length;
+            document.getElementById('plantsCount').textContent = gameState.unlockedPlants.length;
+            document.getElementById('unlockedCount').textContent = gameState.unlockedPlants.length;
+            document.getElementById('totalPlants').textContent = PLANTS.length;
+            
+            PLANTS.forEach(p => {
+                if (gameState.correct >= p.unlockAt && !gameState.unlockedPlants.includes(p.id)) {
+                    gameState.unlockedPlants.push(p.id);
+                }
+            });
+            
+            const next = PLANTS.find(p => gameState.correct < p.unlockAt);
+            if (next) {
+                const needed = next.unlockAt - gameState.correct;
+                document.getElementById('nextUnlock').innerHTML = `再答对 <span id="neededForNext">${needed}</span> 题解锁：${next.emoji} ${next.name}`;
+                document.getElementById('nextUnlock').style.display = 'block';
+            } else {
+                document.getElementById('nextUnlock').innerHTML = '🎉 恭喜！你已经解锁了所有植物！';
+                document.getElementById('nextUnlock').style.display = 'block';
+            }
+            
+            renderGarden();
+            saveState();
+        }
+
+        function renderGarden() {
+            const grid = document.getElementById('gardenGrid');
+            grid.innerHTML = '';
+            
+            gameState.garden.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.className = 'garden-slot' + (slot.plantId ? ' has-plant' : '');
+                btn.textContent = getPlantEmoji(slot.plantId, slot.stage);
+                btn.onclick = () => openShop(slot.id);
+                grid.appendChild(btn);
+            });
+        }
+
+        function getPlantEmoji(plantId, stage) {
+            const plant = PLANTS.find(p => p.id === plantId);
+            if (!plant) return '🟫';
+            if (stage <= 0) return '🟫';
+            if (stage <= 2) return GROWTH_STAGES[stage - 1];
+            return plant.emoji;
+        }
+
+        function renderQuestion() {
+            document.getElementById('questionText').textContent = currentQuestion.question;
+            
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            document.getElementById('feedbackArea').innerHTML = '';
+            
+            currentQuestion.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => selectAnswer(opt, idx);
+                grid.appendChild(btn);
+            });
+        }
+
+        // ==================== 植物图鉴系统 ====================
+
+        function openAlbum() {
+            document.getElementById('albumModal').classList.add('active');
+            renderAlbum();
+        }
+
+        function closeAlbum() {
+            document.getElementById('albumModal').classList.remove('active');
+        }
+
+        function renderAlbum() {
+            const body = document.getElementById('albumBody');
+            
+            const unlockedCount = gameState.unlockedPlants.length;
+            const totalCount = PLANTS.length;
+            
+            body.innerHTML = `
+                <div class="album-grid">
+                    ${PLANTS.map(p => {
+                        const isUnlocked = gameState.unlockedPlants.includes(p.id);
+                        return `
+                            <div class="album-item ${isUnlocked ? 'unlocked' : 'locked'}">
+                                <span class="lock-icon">🔒</span>
+                                <div class="album-emoji">${p.emoji}</div>
+                                <div class="album-name">${p.name}</div>
+                                <div class="album-desc">${p.desc}</div>
+                                <div class="album-condition">需要答对 ${p.unlockAt} 题</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="album-stats">
+                    📊 收集进度：${unlockedCount}/${totalCount} 种植物 (${Math.round(unlockedCount/totalCount*100)}%)
+                </div>
+            `;
+        }
+
+        // ==================== 帮助系统 ====================
+
+        function openHelp() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // ==================== 答题逻辑 ====================
+
+        function selectAnswer(answer, idx) {
+            if (answered) return;
+            answered = true;
+            
+            const isCorrect = answer === currentQuestion.answer;
+            
+            const buttons = document.querySelectorAll('#optionsGrid .option-btn');
+            buttons.forEach((btn, i) => {
+                btn.classList.add('answered');
+                const val = currentQuestion.options[i];
+                if (val === currentQuestion.answer) {
+                    btn.classList.add('correct');
+                    btn.textContent += ' ✓';
+                } else if (val === answer && !isCorrect) {
+                    btn.classList.add('wrong');
+                    btn.textContent += ' ✗';
+                } else {
+                    btn.classList.add('disabled');
+                }
+            });
+            
+            if (isCorrect) {
+                gameState.correct++;
+                document.getElementById('feedbackArea').innerHTML = `
+                    <div class="feedback correct">
+                        <p style="font-weight: bold; font-size: 1.25rem;">🎉 答对了！</p>
+                        <p style="font-size: 0.875rem; margin-top: 4px;">继续加油，让花园更美丽！</p>
+                    </div>
+                    <button class="continue-btn" onclick="generateQuestion()">下一题 →</button>
+                `;
+            } else {
+                gameState.wrong++;
+                addToMistakes(currentQuestion);
+                document.getElementById('feedbackArea').innerHTML = `
+                    <div class="feedback wrong">
+                        <p style="font-weight: bold; font-size: 1.25rem;">😅 答错了...</p>
+                        <p style="font-size: 0.875rem; margin-top: 4px;">正确答案是 ${currentQuestion.answer}，已收录到错题本！</p>
+                    </div>
+                    <button class="continue-btn" onclick="generateQuestion()">下一题 →</button>
+                `;
+            }
+            
+            updateUI();
+        }
+
+        function setDifficulty(diff, btnElement) {
+            currentDifficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            generateQuestion();
+        }
+
+        // ==================== 错题库系统 ====================
+
+        function addToMistakes(q) {
+            const exists = gameState.mistakes.find(m => m.question === q.question);
+            if (!exists) {
+                gameState.mistakes.push({
+                    id: Date.now(),
+                    question: q.question,
+                    answer: q.answer,
+                    difficulty: q.difficulty,
+                    wrongAt: new Date().toLocaleString(),
+                    wrongCount: 1,
+                    tags: []
+                });
+                saveState();
+            } else {
+                exists.wrongCount++;
+                exists.wrongAt = new Date().toLocaleString();
+                saveState();
+            }
+        }
+
+        function removeFromMistakes(id) {
+            gameState.mistakes = gameState.mistakes.filter(m => m.id !== id);
+            saveState();
+            renderMistakes();
+        }
+
+        function filterMistakes(filter, btnElement) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            renderMistakes();
+        }
+
+        function renderMistakes() {
+            const list = document.getElementById('mistakesList');
+            
+            let filtered = gameState.mistakes;
+            if (currentFilter !== 'all') {
+                filtered = gameState.mistakes.filter(m => m.difficulty === currentFilter);
+            }
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="mistakes-empty">
+                        <p style="font-size: 3rem;">✨</p>
+                        <p style="margin-top: 10px;">暂无错题，太棒了！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = filtered.map(m => `
+                <div class="mistake-item">
+                    <div class="mistake-header">
+                        <span class="mistake-difficulty ${m.difficulty}">${m.difficulty === 'easy' ? '简单' : m.difficulty === 'medium' ? '中等' : '困难'}</span>
+                        <span style="font-size: 0.75rem; color: #9ca3af;">错 ${m.wrongCount} 次</span>
+                    </div>
+                    <div class="mistake-question">${m.question}</div>
+                    <div class="mistake-info">
+                        <p>✅ 正确答案：${m.answer}</p>
+                        <p style="color: #9ca3af; font-size: 0.75rem;">📅 ${m.wrongAt}</p>
+                    </div>
+                    <div class="mistake-actions">
+                        <button class="btn btn-primary btn-small" style="flex: 1;" onclick="practiceOne(${m.id})">📝 练习</button>
+                        <button class="btn btn-danger btn-small" onclick="removeFromMistakes(${m.id})">🗑️ 移除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function practiceMistakes() {
+            if (gameState.mistakes.length === 0) return;
+            
+            practiceQueue = [...gameState.mistakes];
+            isPracticeMode = true;
+            closeMistakes();
+            openQuiz();
+        }
+
+        function practiceOne(id) {
+            const m = gameState.mistakes.find(x => x.id === id);
+            if (!m) return;
+            
+            practiceQueue = [m];
+            isPracticeMode = true;
+            closeMistakes();
+            openQuiz();
+        }
+
+        function clearMistakes() {
+            if (confirm('确定要清空所有错题吗？')) {
+                gameState.mistakes = [];
+                saveState();
+                renderMistakes();
+                updateUI();
+            }
+        }
+
+        function exportMistakes() {
+            if (gameState.mistakes.length === 0) {
+                alert('没有错题可导出！');
+                return;
+            }
+            
+            const data = gameState.mistakes.map(m => {
+                return `【${m.difficulty}】${m.question}\n正确答案：${m.answer}\n错误次数：${m.wrongCount}\n记录时间：${m.wrongAt}\n---`;
+            }).join('\n');
+            
+            const blob = new Blob([`🌱 数字花园错题集\n\n${data}`], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `错题集_${new Date().toLocaleDateString()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== Modal 管理 ====================
+
+        function openQuiz() {
+            document.getElementById('quizModal').classList.add('active');
+            generateQuestion();
+        }
+
+        function closeQuiz() {
+            try {
+                document.getElementById('quizModal').classList.remove('active');
+                if (slotForGrow !== null) {
+                    const slot = gameState.garden.find(s => s.id === slotForGrow);
+                    if (slot && slot.plantId) {
+                        const plant = PLANTS.find(p => p.id === slot.plantId);
+                        if (plant && slot.stage < plant.stages) {
+                            slot.stage++;
+                            updateUI();
+                        }
+                    }
+                    slotForGrow = null;
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('quizModal').classList.remove('active');
+            }
+        }
+
+        function openMistakes() {
+            document.getElementById('mistakesModal').classList.add('active');
+            renderMistakes();
+        }
+
+        function closeMistakes() {
+            document.getElementById('mistakesModal').classList.remove('active');
+        }
+
+        function openShop(slotId) {
+            selectedSlotId = slotId;
+            const slot = gameState.garden.find(s => s.id === slotId);
+            
+            document.getElementById('shopModal').classList.add('active');
+            const shopBody = document.getElementById('shopBody');
+            
+            if (slot.plantId) {
+                const plant = PLANTS.find(p => p.id === slot.plantId);
+                document.getElementById('shopTitle').textContent = '🌿 植物管理';
+                
+                shopBody.innerHTML = `
+                    <div class="plant-detail">
+                        <div class="plant-detail-emoji">${plant.emoji}</div>
+                        <h3 style="font-weight: bold; font-size: 1.25rem; margin-bottom: 4px;">${plant.name}</h3>
+                        <p style="color: #4b5563; margin-bottom: 8px;">${plant.desc}</p>
+                        <p style="font-size: 0.875rem; color: #6b7280;">生长阶段：${slot.stage} / ${plant.stages}</p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(slot.stage / plant.stages) * 100}%;"></div>
+                        </div>
+                    </div>
+                    <div class="plant-actions">
+                        ${slot.stage < plant.stages ? `
+                            <button class="action-btn grow" onclick="growPlant()">🌱 施肥生长（答题）</button>
+                        ` : ''}
+                        <button class="action-btn remove" onclick="removePlant()">🗑️ 移除植物</button>
+                    </div>
+                `;
+            } else {
+                document.getElementById('shopTitle').textContent = '🏪 植物商店';
+                const available = PLANTS.filter(p => gameState.unlockedPlants.includes(p.id));
+                
+                shopBody.innerHTML = `
+                    <p style="color: #4b5563; margin-bottom: 16px;">选择一株植物种在花园里：</p>
+                    <div class="plant-grid">
+                        ${available.map(p => `
+                            <button class="plant-card" onclick="plantPlant('${p.id}')">
+                                <div class="plant-emoji">${p.emoji}</div>
+                                <div class="plant-name">${p.name}</div>
+                                <div class="plant-desc">${p.desc}</div>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        function closeShop() {
+            document.getElementById('shopModal').classList.remove('active');
+            selectedSlotId = null;
+        }
+
+        function plantPlant(plantId) {
+            if (selectedSlotId !== null) {
+                const slot = gameState.garden.find(s => s.id === selectedSlotId);
+                if (slot) {
+                    slot.plantId = plantId;
+                    slot.stage = 1;
+                }
+            }
+            closeShop();
+            updateUI();
+        }
+
+        function growPlant() {
+            slotForGrow = selectedSlotId;
+            closeShop();
+            openQuiz();
+        }
+
+        function removePlant() {
+            if (selectedSlotId !== null) {
+                const slot = gameState.garden.find(s => s.id === selectedSlotId);
+                if (slot) {
+                    slot.plantId = null;
+                    slot.stage = 0;
+                }
+            }
+            closeShop();
+            updateUI();
+        }
+
+        // ==================== 点击外部关闭 ====================
+
+        document.getElementById('quizModal').addEventListener('click', function(e) {
+            if (e.target === this) closeQuiz();
+        });
+        document.getElementById('albumModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAlbum();
+        });
+        document.getElementById('mistakesModal').addEventListener('click', function(e) {
+            if (e.target === this) closeMistakes();
+        });
+        document.getElementById('shopModal').addEventListener('click', function(e) {
+            if (e.target === this) closeShop();
+        });
+        document.getElementById('helpModal').addEventListener('click', function(e) {
+            if (e.target === this) closeHelp();
+        });
+
+        // ==================== 启动 ====================
+
+        loadState();
+        updateUI();
+    </script>
+</body>
+</html>
