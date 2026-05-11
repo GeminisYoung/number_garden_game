@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 数字花园</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(to bottom, #e0f2fe, #dcfce7); min-height: 100vh; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        h1 { text-align: center; color: #15803d; font-size: 2rem; margin-bottom: 16px; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+        .stat { text-align: center; padding: 12px; border-radius: 12px; }
+        .stat.correct { background: #dcfce7; color: #15803d; }
+        .stat.wrong { background: #fee2e2; color: #b91c1c; }
+        .stat.plants { background: #f3e8ff; color: #7c3aed; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; }
+        .stat-label { font-size: 0.75rem; margin-top: 4px; }
+        .next-unlock { background: #fef3c7; color: #92400e; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
+        .garden { background: linear-gradient(to bottom, #7dd3fc, #86efac); border-radius: 16px; padding: 20px; }
+        .garden h2 { text-align: center; color: #15803d; margin-bottom: 16px; }
+        .garden-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .garden-slot { aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; cursor: pointer; transition: transform 0.15s; background: #fef3c7; }
+        .garden-slot:hover { transform: scale(1.05); }
+        .garden-slot.has-plant { background: #fde68a; }
+        .actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .btn { padding: 16px; border-radius: 16px; border: none; font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.15s; color: white; }
+        .btn:hover { transform: scale(1.02); }
+        .btn-quiz { background: linear-gradient(to right, #3b82f6, #8b5cf6); }
+        .btn-refresh { background: linear-gradient(to right, #9ca3af, #6b7280); }
+        .instructions { font-size: 0.875rem; color: #4b5563; }
+        .instructions h3 { font-weight: bold; margin-bottom: 8px; color: #1f2937; }
+        .instructions ul { list-style: none; }
+        .instructions li { margin-bottom: 4px; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 16px; max-width: 400px; width: 100%; max-height: 90vh; overflow: hidden; }
+        .modal-header { background: linear-gradient(to right, #22c55e, #10b981); padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header.quiz { background: linear-gradient(to right, #3b82f6, #8b5cf6); }
+        .modal-title { color: white; font-size: 1.5rem; font-weight: bold; }
+        .modal-close { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .modal-body { padding: 20px; max-height: 60vh; overflow-y: auto; }
+
+        /* Quiz */
+        .difficulty-buttons { display: flex; gap: 8px; margin-bottom: 16px; }
+        .diff-btn { padding: 6px 12px; border-radius: 20px; border: none; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+        .diff-btn.active.easy { background: #dcfce7; color: #15803d; }
+        .diff-btn.active.medium { background: #fef3c7; color: #92400e; }
+        .diff-btn.active.hard { background: #fee2e2; color: #b91c1c; }
+        .diff-btn:not(.active) { background: #f3f4f6; color: #4b5563; }
+        .question-display { background: linear-gradient(to right, #eff6ff, #faf5ff); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+        .question-text { font-size: 2.5rem; font-weight: bold; color: #1f2937; }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .option-btn { padding: 16px; border-radius: 12px; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; transition: transform 0.15s; }
+        .option-btn:not(.answered) { background: #3b82f6; color: white; }
+        .option-btn:not(.answered):hover { transform: scale(1.05); background: #2563eb; }
+        .option-btn.correct { background: #22c55e; color: white; }
+        .option-btn.wrong { background: #ef4444; color: white; }
+        .option-btn.disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+        .feedback { padding: 12px; border-radius: 12px; text-align: center; margin-top: 16px; }
+        .feedback.correct { background: #dcfce7; color: #15803d; }
+        .feedback.wrong { background: #fee2e2; color: #b91c1c; }
+        .continue-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; background: #8b5cf6; color: white; font-weight: bold; font-size: 1rem; margin-top: 16px; cursor: pointer; }
+
+        /* Shop */
+        .plant-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .plant-card { padding: 16px; background: #dcfce7; border-radius: 12px; cursor: pointer; transition: transform 0.15s; text-align: left; border: none; }
+        .plant-card:hover { transform: scale(1.02); background: #bbf7d0; }
+        .plant-emoji { font-size: 2.5rem; margin-bottom: 8px; }
+        .plant-name { font-weight: bold; color: #1f2937; }
+        .plant-desc { font-size: 0.75rem; color: #4b5563; margin-top: 4px; }
+        .plant-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .action-btn { padding: 12px; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; color: white; }
+        .action-btn.grow { background: #22c55e; }
+        .action-btn.remove { background: #ef4444; }
+        .plant-detail { text-align: center; }
+        .plant-detail-emoji { font-size: 4rem; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🌱 数字花园</h1>
+            <div class="stats">
+                <div class="stat correct">
+                    <div class="stat-value">✅ <span id="correctCount">0</span></div>
+                    <div class="stat-label">答对</div>
+                </div>
+                <div class="stat wrong">
+                    <div class="stat-value">❌ <span id="wrongCount">0</span></div>
+                    <div class="stat-label">答错</div>
+                </div>
+                <div class="stat plants">
+                    <div class="stat-value">🌿 <span id="plantsCount">1</span></div>
+                    <div class="stat-label">解锁植物</div>
+                </div>
+            </div>
+            <div class="next-unlock" id="nextUnlock">
+                再答对 <span id="neededForNext">3</span> 题解锁：🌷 郁金香
+            </div>
+        </div>
+
+        <div class="garden">
+            <h2>🌱 我的花园</h2>
+            <div class="garden-grid" id="gardenGrid"></div>
+        </div>
+
+        <div class="card">
+            <div class="actions">
+                <button class="btn btn-quiz" onclick="openQuiz()">🧮 做数学题</button>
+                <button class="btn btn-refresh" onclick="location.reload()">🔄 刷新花园</button>
+            </div>
+        </div>
+
+        <div class="card instructions">
+            <h3>📖 游戏说明</h3>
+            <ul>
+                <li>• 点击花园的空位选择植物种植</li>
+                <li>• 做数学题答对可以解锁新植物</li>
+                <li>• 点击已种植的植物可以施肥生长</li>
+                <li>• 收集所有植物，建造美丽的花园！</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Quiz Modal -->
+    <div class="modal" id="quizModal">
+        <div class="modal-content">
+            <div class="modal-header quiz">
+                <span class="modal-title">🧮 数学挑战</span>
+                <button class="modal-close" onclick="closeQuiz()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="difficulty-buttons">
+                    <button class="diff-btn active easy" onclick="setDifficulty('easy', this)">简单</button>
+                    <button class="diff-btn medium" onclick="setDifficulty('medium', this)">中等</button>
+                    <button class="diff-btn hard" onclick="setDifficulty('hard', this)">困难</button>
+                </div>
+                <div class="question-display">
+                    <div class="question-text" id="questionText">5 + 3 = ?</div>
+                </div>
+                <div class="options-grid" id="optionsGrid"></div>
+                <div id="feedbackArea"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div class="modal" id="shopModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="shopTitle">🏪 植物商店</span>
+                <button class="modal-close" onclick="closeShop()">×</button>
+            </div>
+            <div class="modal-body" id="shopBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // Plant Data
+        const PLANTS = [
+            { id: 'sunflower', name: '向日葵', emoji: '🌻', stages: 3, unlockAt: 0, desc: '你的第一朵花！' },
+            { id: 'tulip', name: '郁金香', emoji: '🌷', stages: 3, unlockAt: 3, desc: '优雅的春天使者。' },
+            { id: 'rose', name: '玫瑰', emoji: '🌹', stages: 4, unlockAt: 8, desc: '美丽的红玫瑰。' },
+            { id: 'cherry', name: '樱花', emoji: '🌸', stages: 4, unlockAt: 15, desc: '浪漫的樱花。' },
+            { id: 'cactus', name: '仙人掌', emoji: '🌵', stages: 3, unlockAt: 25, desc: '坚强的沙漠植物！' },
+            { id: 'tree', name: '大树', emoji: '🌳', stages: 5, unlockAt: 40, desc: '参天大树！' }
+        ];
+
+        const GROWTH_STAGES = ['🌱', '🌿', null, null, null];
+
+        // Game State
+        let gameState = {
+            correct: 0,
+            wrong: 0,
+            garden: [],
+            unlockedPlants: ['sunflower']
+        };
+
+        // Initialize Garden
+        function initGarden() {
+            for (let i = 0; i < 12; i++) {
+                gameState.garden.push({ id: i, plantId: null, stage: 0 });
+            }
+        }
+
+        // Load/Save State
+        function loadState() {
+            const saved = localStorage.getItem('digitalGardenState');
+            if (saved) {
+                gameState = JSON.parse(saved);
+            } else {
+                initGarden();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('digitalGardenState', JSON.stringify(gameState));
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('correctCount').textContent = gameState.correct;
+            document.getElementById('wrongCount').textContent = gameState.wrong;
+            
+            // Check unlocked plants
+            PLANTS.forEach(plant => {
+                if (gameState.correct >= plant.unlockAt && !gameState.unlockedPlants.includes(plant.id)) {
+                    gameState.unlockedPlants.push(plant.id);
+                }
+            });
+            
+            document.getElementById('plantsCount').textContent = gameState.unlockedPlants.length;
+            
+            // Next unlock
+            const nextPlant = PLANTS.find(p => gameState.correct < p.unlockAt);
+            if (nextPlant) {
+                const needed = nextPlant.unlockAt - gameState.correct;
+                document.getElementById('nextUnlock').innerHTML = 
+                    `再答对 <span id="neededForNext">${needed}</span> 题解锁：${nextPlant.emoji} ${nextPlant.name}`;
+                document.getElementById('nextUnlock').style.display = 'block';
+            } else {
+                document.getElementById('nextUnlock').style.display = 'none';
+            }
+            
+            renderGarden();
+            saveState();
+        }
+
+        function getPlantEmoji(plantId, stage) {
+            const plant = PLANTS.find(p => p.id === plantId);
+            if (!plant) return '🟫';
+            if (stage <= 0) return '🟫';
+            if (stage <= 2) return GROWTH_STAGES[stage - 1];
+            return plant.emoji;
+        }
+
+        function renderGarden() {
+            const grid = document.getElementById('gardenGrid');
+            grid.innerHTML = '';
+            
+            gameState.garden.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.className = 'garden-slot' + (slot.plantId ? ' has-plant' : '');
+                btn.textContent = getPlantEmoji(slot.plantId, slot.stage);
+                btn.onclick = () => openShop(slot.id);
+                grid.appendChild(btn);
+            });
+        }
+
+        // Quiz System
+        let currentQuestion = null;
+        let currentDifficulty = 'easy';
+        let answered = false;
+        let currentAnswer = null;
+
+        function generateQuestion() {
+            let a, b, question, answer;
+            
+            switch(currentDifficulty) {
+                case 'easy':
+                    a = Math.floor(Math.random() * 10) + 1;
+                    b = Math.floor(Math.random() * 10) + 1;
+                    if (Math.random() > 0.5) {
+                        question = `${a} + ${b} = ?`;
+                        answer = a + b;
+                    } else {
+                        if (a < b) [a, b] = [b, a];
+                        question = `${a} - ${b} = ?`;
+                        answer = a - b;
+                    }
+                    break;
+                case 'medium':
+                    a = Math.floor(Math.random() * 20) + 5;
+                    b = Math.floor(Math.random() * 20) + 5;
+                    const op = Math.random();
+                    if (op < 0.33) {
+                        question = `${a} + ${b} = ?`;
+                        answer = a + b;
+                    } else if (op < 0.66) {
+                        if (a < b) [a, b] = [b, a];
+                        question = `${a} - ${b} = ?`;
+                        answer = a - b;
+                    } else {
+                        a = Math.floor(Math.random() * 10) + 2;
+                        b = Math.floor(Math.random() * 10) + 2;
+                        question = `${a} × ${b} = ?`;
+                        answer = a * b;
+                    }
+                    break;
+                case 'hard':
+                    const op2 = Math.random();
+                    if (op2 < 0.25) {
+                        a = Math.floor(Math.random() * 50) + 10;
+                        b = Math.floor(Math.random() * 50) + 10;
+                        question = `${a} + ${b} = ?`;
+                        answer = a + b;
+                    } else if (op2 < 0.5) {
+                        a = Math.floor(Math.random() * 30) + 10;
+                        b = Math.floor(Math.random() * 20) + 5;
+                        question = `${a} - ${b} = ?`;
+                        answer = a - b;
+                    } else if (op2 < 0.75) {
+                        a = Math.floor(Math.random() * 12) + 2;
+                        b = Math.floor(Math.random() * 12) + 2;
+                        question = `${a} × ${b} = ?`;
+                        answer = a * b;
+                    } else {
+                        b = Math.floor(Math.random() * 10) + 2;
+                        answer = Math.floor(Math.random() * 10) + 2;
+                        a = b * answer;
+                        question = `${a} ÷ ${b} = ?`;
+                    }
+                    break;
+            }
+
+            // Generate options
+            const options = [answer];
+            while (options.length < 4) {
+                const offset = Math.floor(Math.random() * 10) - 5;
+                const wrong = answer + offset;
+                if (wrong !== answer && wrong >= 0 && !options.includes(wrong)) {
+                    options.push(wrong);
+                }
+            }
+            
+            // Shuffle
+            for (let i = options.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [options[i], options[j]] = [options[j], options[i]];
+            }
+
+            currentQuestion = { question, answer, options };
+            answered = false;
+            currentAnswer = null;
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            document.getElementById('questionText').textContent = currentQuestion.question;
+            
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            document.getElementById('feedbackArea').innerHTML = '';
+            
+            currentQuestion.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => selectAnswer(opt);
+                grid.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(answer) {
+            if (answered) return;
+            answered = true;
+            currentAnswer = answer;
+            
+            const isCorrect = answer === currentQuestion.answer;
+            
+            const buttons = document.querySelectorAll('#optionsGrid .option-btn');
+            buttons.forEach((btn, idx) => {
+                btn.classList.add('answered');
+                const val = currentQuestion.options[idx];
+                if (val === currentQuestion.answer) {
+                    btn.classList.add('correct');
+                    btn.textContent += ' ✓';
+                } else if (val === answer && !isCorrect) {
+                    btn.classList.add('wrong');
+                    btn.textContent += ' ✗';
+                } else {
+                    btn.classList.add('disabled');
+                }
+            });
+            
+            if (isCorrect) {
+                gameState.correct++;
+                document.getElementById('feedbackArea').innerHTML = `
+                    <div class="feedback correct">
+                        <p style="font-weight: bold; font-size: 1.25rem;">🎉 答对了！</p>
+                        <p style="font-size: 0.875rem; margin-top: 4px;">继续加油，让花园更美丽！</p>
+                    </div>
+                    <button class="continue-btn" onclick="generateQuestion()">下一题 →</button>
+                `;
+            } else {
+                gameState.wrong++;
+                document.getElementById('feedbackArea').innerHTML = `
+                    <div class="feedback wrong">
+                        <p style="font-weight: bold; font-size: 1.25rem;">😅 答错了...</p>
+                        <p style="font-size: 0.875rem; margin-top: 4px;">正确答案是 ${currentQuestion.answer}</p>
+                    </div>
+                    <button class="continue-btn" onclick="generateQuestion()">下一题 →</button>
+                `;
+            }
+            
+            updateUI();
+        }
+
+        function setDifficulty(diff, btnElement) {
+            currentDifficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+            const targetBtn = btnElement || event.target;
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+            }
+            generateQuestion();
+        }
+
+        // Shop System
+        let selectedSlotId = null;
+        let slotForGrow = null;
+
+        function openQuiz() {
+            document.getElementById('quizModal').classList.add('active');
+            generateQuestion();
+        }
+
+        function closeQuiz() {
+            try {
+                document.getElementById('quizModal').classList.remove('active');
+                if (slotForGrow !== null) {
+                    const slot = gameState.garden.find(s => s.id === slotForGrow);
+                    if (slot && slot.plantId) {
+                        const plant = PLANTS.find(p => p.id === slot.plantId);
+                        if (plant && slot.stage < plant.stages) {
+                            slot.stage++;
+                            updateUI();
+                        }
+                    }
+                    slotForGrow = null;
+                }
+            } catch (e) {
+                console.error('关闭答题页面出错:', e);
+                document.getElementById('quizModal').classList.remove('active');
+            }
+        }
+
+        function openShop(slotId) {
+            selectedSlotId = slotId;
+            const slot = gameState.garden.find(s => s.id === slotId);
+            
+            document.getElementById('shopModal').classList.add('active');
+            const shopBody = document.getElementById('shopBody');
+            
+            if (slot.plantId) {
+                const plant = PLANTS.find(p => p.id === slot.plantId);
+                document.getElementById('shopTitle').textContent = '🌿 植物管理';
+                
+                shopBody.innerHTML = `
+                    <div class="plant-detail">
+                        <div class="plant-detail-emoji">${plant.emoji}</div>
+                        <h3 style="font-weight: bold; font-size: 1.25rem; margin-bottom: 4px;">${plant.name}</h3>
+                        <p style="color: #4b5563; margin-bottom: 8px;">${plant.desc}</p>
+                        <p style="font-size: 0.875rem; color: #6b7280;">生长阶段: ${slot.stage} / ${plant.stages}</p>
+                    </div>
+                    <div class="plant-actions">
+                        ${slot.stage < plant.stages ? `
+                            <button class="action-btn grow" onclick="growPlant()">🌱 施肥生长（答题）</button>
+                        ` : ''}
+                        <button class="action-btn remove" onclick="removePlant()">🗑️ 移除植物</button>
+                    </div>
+                `;
+            } else {
+                document.getElementById('shopTitle').textContent = '🏪 植物商店';
+                const availablePlants = PLANTS.filter(p => gameState.unlockedPlants.includes(p.id));
+                
+                shopBody.innerHTML = `
+                    <p style="color: #4b5563; margin-bottom: 16px;">选择一株植物种在花园里：</p>
+                    <div class="plant-grid">
+                        ${availablePlants.map(p => `
+                            <button class="plant-card" onclick="plantPlant('${p.id}')">
+                                <div class="plant-emoji">${p.emoji}</div>
+                                <div class="plant-name">${p.name}</div>
+                                <div class="plant-desc">${p.desc}</div>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        function closeShop() {
+            document.getElementById('shopModal').classList.remove('active');
+            selectedSlotId = null;
+        }
+
+        function plantPlant(plantId) {
+            if (selectedSlotId !== null) {
+                const slot = gameState.garden.find(s => s.id === selectedSlotId);
+                if (slot) {
+                    slot.plantId = plantId;
+                    slot.stage = 1;
+                }
+            }
+            closeShop();
+            updateUI();
+        }
+
+        function growPlant() {
+            slotForGrow = selectedSlotId;
+            closeShop();
+            openQuiz();
+        }
+
+        function removePlant() {
+            if (selectedSlotId !== null) {
+                const slot = gameState.garden.find(s => s.id === selectedSlotId);
+                if (slot) {
+                    slot.plantId = null;
+                    slot.stage = 0;
+                }
+            }
+            closeShop();
+            updateUI();
+        }
+
+        // Initialize
+        loadState();
+        updateUI();
+
+        // 点击模态框外部关闭
+        document.getElementById('quizModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQuiz();
+            }
+        });
+        document.getElementById('shopModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeShop();
+            }
+        });
+    </script>
+</body>
+</html>
