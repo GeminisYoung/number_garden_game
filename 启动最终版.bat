@@ -1,3 +1,0 @@
-@echo off
-echo 🌱 启动数字花园最终版...
-start index-ultimate.html

@@ -1,3 +1,0 @@
-@echo off
-echo 🌱 启动数字花园...
-start index-simple.html
